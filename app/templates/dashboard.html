@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body_class %}dashboard-body{% endblock %}
+{% block content %}
+
+<section class="filter-panel">
+  <form method="get" action="/dashboard" class="filters">
+    <label>
+      Empresa (codigo)
+      <input name="empresa_codigo" value="{{ f_empresa_codigo }}" placeholder="Ex.: 1530555">
+    </label>
+    <label>
+      Leiaute
+      <select name="leiaute" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for le in leiautes_fixos %}
+        <option value="{{ le }}" {% if f_leiaute == le %}selected{% endif %}>{{ le }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Data inicial
+      <input type="date" name="data_inicio" value="{{ f_data_inicio }}">
+    </label>
+    <label>
+      Data final
+      <input type="date" name="data_fim" value="{{ f_data_fim }}">
+    </label>
+    <label>
+      Inconsistencia
+      <select name="inconsistencia" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        {% for i in opt_inconsistencias %}
+        <option value="{{ i }}" {% if f_inconsistencia == i %}selected{% endif %}>{{ i }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button type="submit" class="button">Filtrar</button>
+      <a href="/dashboard" class="button button-secondary">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<div class="dash-grid">
+  <div class="kpi-group">
+    <div class="kpi-card">
+      <span class="kpi-value">{{ total }}</span>
+      <span class="kpi-label">Inconsistencias</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ empresas_afetadas }}</span>
+      <span class="kpi-label">Empresas afetadas</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-value">{{ funcionarios_afetados }}</span>
+      <span class="kpi-label">Funcionarios afetados</span>
+    </div>
+  </div>
+  <section class="dash-panel leiaute-panel">
+    <ul class="bar-list">
+      {% for s in leiaute_bars %}
+      {% set w = (s.n / max_leiaute * 100) if max_leiaute else 0 %}
+      <li>
+        <span class="bar-label">{{ s.leiaute }}</span>
+        <span class="bar-track"><span class="bar-fill" style="width: {{ '%.0f' % w }}%"></span></span>
+        <span class="bar-value">{{ s.n }} ({{ '%.0f' % s.pct }}%)</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<div class="dash-grid">
+<section class="dash-panel">
+  <h2>Inconsistencias por empresa</h2>
+  {% if top_empresas %}
+  <ul class="hbar-list">
+    {% for nome, n in top_empresas %}
+    {% set w = (n / max_empresa * 100) if max_empresa else 0 %}
+    <li>
+      <div class="hbar-head"><span class="hbar-label">{{ nome }}</span><span class="hbar-value">{{ n }}</span></div>
+      <div class="bar-track"><span class="bar-fill" style="width: {{ '%.0f' % w }}%"></span></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="empty">Sem dados ainda.</p>{% endif %}
+</section>
+
+<section class="dash-panel">
+  <h2>Quantidade de cada inconsistencia</h2>
+  {% if top_tipos %}
+  <ul class="hbar-list">
+    {% for desc, n in top_tipos %}
+    {% set w = (n / max_tipo * 100) if max_tipo else 0 %}
+    <li>
+      <div class="hbar-head"><span class="hbar-label">{{ desc }}</span><span class="hbar-value">{{ n }}</span></div>
+      <div class="bar-track"><span class="bar-fill" style="width: {{ '%.0f' % w }}%"></span></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="empty">Sem dados ainda.</p>{% endif %}
+</section>
+</div>
+
+{% endblock %}

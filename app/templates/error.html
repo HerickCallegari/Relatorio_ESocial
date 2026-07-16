@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Erro {{ status_code }}{% endblock %}
+{% block content %}
+<section class="login-panel">
+  <h1>Erro {{ status_code }}</h1>
+  <p>{{ message }}</p>
+  <a class="button" href="/">Voltar</a>
+</section>
+{% endblock %}
+

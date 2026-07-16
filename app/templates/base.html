@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Relatorio eSocial{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+    <header class="topbar">
+      <a class="brand" href="/">Inconsistencias eSocial</a>
+      {% if current_user %}
+      <nav class="topnav">
+        <a href="/" class="navlink {% if request.url.path == '/' %}active{% endif %}">Analitico</a>
+        <a href="/dashboard" class="navlink {% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+      </nav>
+      <div class="top-actions">
+        <a href="/blacklist" class="icon-button blacklist-button {% if request.url.path == '/blacklist' %}active{% endif %}" title="Blacklist" aria-label="Blacklist">
+          <span class="ban-icon"></span>
+        </a>
+        <form method="post" action="/logout">
+          <button type="submit" class="button button-secondary">Sair</button>
+        </form>
+      </div>
+      {% endif %}
+    </header>
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+[Unit]
+Description=Dispara diariamente o sync de inconsistencias do ESocial
+
+[Timer]
+# Todos os dias as 02:00 (horario do servidor -- veja timezone no README).
+OnCalendar=*-*-* 02:00:00
+
+# Se a VPS estava desligada/suspensa na hora agendada, roda assim que voltar.
+Persistent=true
+
+# Atraso aleatorio de ate 5 min para nao bater sempre no mesmo segundo exato.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

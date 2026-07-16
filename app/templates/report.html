@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Relatorio{% endblock %}
+{% block content %}
+{% if message %}
+<div class="alert alert-success">{{ message }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<section class="bulk-panel">
+  <div class="bulk-head">
+    <div>
+      <strong>Atualizar dados (todas as empresas ativas)</strong>
+      <p class="muted">Busca as inconsistencias dos ultimos 60 dias para todas as empresas ativas.
+        Roda em segundo plano e pode levar horas.</p>
+    </div>
+    <div class="bulk-actions">
+      <form method="post" action="/inconsistencies/sync-all">
+        <button type="submit" class="button"
+          {% if bulk_job and bulk_job.status in ['running', 'cancelando'] %}disabled{% endif %}>
+          Atualizar dados
+        </button>
+      </form>
+      {% if bulk_job and bulk_job.status in ['running', 'cancelando'] %}
+      <form method="post" action="/inconsistencies/sync-all/cancel">
+        <button type="submit" class="button button-danger"
+          {% if bulk_job.status == 'cancelando' %}disabled{% endif %}>
+          {% if bulk_job.status == 'cancelando' %}Cancelando...{% else %}Cancelar{% endif %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if bulk_job %}
+  <div class="bulk-status">
+    {% if bulk_job.status in ['running', 'cancelando'] %}
+      {% set pct = (bulk_job.processadas / bulk_job.total * 100) if bulk_job.total else 0 %}
+      <div class="progress"><div class="progress-bar" id="bulk-bar" style="width: {{ '%.1f' % pct }}%"></div></div>
+      <p>
+        <span id="bulk-text">{% if bulk_job.status == 'cancelando' %}Cancelando &mdash; {% endif %}Sincronizando {{ bulk_job.processadas }}/{{ bulk_job.total }}{% if bulk_job.empresa_atual %} &mdash; {{ bulk_job.empresa_atual }}{% endif %} &nbsp;|&nbsp; {{ bulk_job.total_inconsistencias }} inconsistencias &nbsp;|&nbsp; {{ bulk_job.erros }} erros</span>
+        <span class="muted">(atualiza sozinho, sem recarregar)</span></p>
+    {% elif bulk_job.status == 'cancelado' %}
+      <p class="warn">Atualizacao cancelada em {{ bulk_job.processadas }}/{{ bulk_job.total }}
+        ({{ bulk_job.total_inconsistencias }} inconsistencias, {{ bulk_job.erros }} erros).
+        Clique em Atualizar dados para retomar de onde parou.</p>
+    {% elif bulk_job.status == 'success' %}
+      <p class="ok">Ultima atualizacao concluida: {{ bulk_job.processadas }}/{{ bulk_job.total }} empresas,
+        {{ bulk_job.total_inconsistencias }} inconsistencias, {{ bulk_job.erros }} erros.</p>
+    {% elif bulk_job.status == 'interrompido' %}
+      {# aviso de interrompido removido a pedido; estado tratado para nao cair no ramo de erro #}
+    {% else %}
+      <p class="err">Ultima atualizacao terminou com erro: {{ bulk_job.mensagem }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="update-panel">
+  <form method="post" action="/inconsistencies/sync" class="filters">
+    <label>
+      Empresa
+      <select name="company_codigo" required>
+        {% for company in companies %}
+        <option value="{{ company.codigo_soc }}">
+          {{ company.nome or company.razao_social or company.codigo_soc }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Data inicial
+      <input type="date" name="data_inicio" required>
+    </label>
+    <label>
+      Data final
+      <input type="date" name="data_fim" required>
+    </label>
+    <button type="submit" class="button button-secondary">Atualizar so esta empresa</button>
+  </form>
+</section>
+
+<section class="filter-panel">
+  <form method="get" action="/" class="filters">
+    <label>
+      Empresa (codigo)
+      <input name="empresa_codigo" value="{{ f_empresa_codigo }}" placeholder="Ex.: 1530555">
+    </label>
+    <label>
+      Setor
+      <select name="setor" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for s in opt_setores %}
+        <option value="{{ s }}" {% if f_setor == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Cargo
+      <select name="cargo" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for c in opt_cargos %}
+        <option value="{{ c }}" {% if f_cargo == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Funcionario
+      <input name="funcionario" value="{{ f_funcionario }}" placeholder="Nome do funcionario">
+    </label>
+    <label>
+      Data inicial
+      <input type="date" name="data_inicio" value="{{ f_data_inicio }}">
+    </label>
+    <label>
+      Data final
+      <input type="date" name="data_fim" value="{{ f_data_fim }}">
+    </label>
+    <label>
+      Leiaute
+      <select name="leiaute" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for l in opt_leiautes %}
+        <option value="{{ l }}" {% if f_leiaute == l %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="filter-wide">
+      Inconsistencia
+      <select name="inconsistencia" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        {% for i in opt_inconsistencias %}
+        <option value="{{ i }}" {% if f_inconsistencia == i %}selected{% endif %}>{{ i }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button type="submit" class="button">Filtrar</button>
+      <a href="/" class="button button-secondary">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<section class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Empresa</th>
+        <th>Unidade</th>
+        <th>Setor</th>
+        <th>Cargo</th>
+        <th>Funcionario</th>
+        <th>Data</th>
+        <th>Leiaute</th>
+        <th>Inconsistencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inconsistencies %}
+      <tr>
+        <td>{{ item.nome_empresa or "-" }}</td>
+        <td>{{ item.nome_unidade or "-" }}</td>
+        <td>{{ item.nome_setor or "-" }}</td>
+        <td>{{ item.nome_cargo or "-" }}</td>
+        <td>{{ item.nome_funcionario or "-" }}</td>
+        <td>{{ item.data.strftime("%d/%m/%Y") if item.data else "-" }}</td>
+        <td><span class="badge">{{ item.leiaute or item.origem_exporta }}</span></td>
+        <td class="highlight">{{ item.descricao_inconsistencia }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="empty">Nenhuma inconsistencia encontrada.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+  // Mostra o banner desta acao uma vez e limpa message/error da URL,
+  // preservando os filtros (setor, empresa, etc.).
+  (function () {
+    var url = new URL(window.location.href);
+    if (url.searchParams.has("message") || url.searchParams.has("error")) {
+      url.searchParams.delete("message");
+      url.searchParams.delete("error");
+      history.replaceState(null, "", url.pathname + url.search);
+    }
+  })();
+</script>
+{% if bulk_job and bulk_job.status in ['running', 'cancelando'] %}
+<script>
+  // Atualiza SO o progresso (sem recarregar a pagina). Quando o lote termina,
+  // recarrega uma unica vez para mostrar o estado final e a tabela.
+  (function () {
+    var RODANDO = ['running', 'cancelando'];
+    function atualizar() {
+      fetch('/inconsistencies/sync-all/status', { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (RODANDO.indexOf(j.status) === -1) {
+            window.location.reload();  // terminou/cancelou: 1 reload p/ estado final
+            return;
+          }
+          var pct = j.total ? (j.processadas / j.total * 100) : 0;
+          var bar = document.getElementById('bulk-bar');
+          if (bar) bar.style.width = pct.toFixed(1) + '%';
+          var txt = document.getElementById('bulk-text');
+          if (txt) {
+            txt.textContent =
+              (j.status === 'cancelando' ? 'Cancelando — ' : '') +
+              'Sincronizando ' + j.processadas + '/' + j.total +
+              (j.empresa_atual ? ' — ' + j.empresa_atual : '') +
+              '  |  ' + j.total_inconsistencias + ' inconsistencias  |  ' + j.erros + ' erros';
+          }
+          setTimeout(atualizar, 10000);
+        })
+        .catch(function () { setTimeout(atualizar, 10000); });
+    }
+    setTimeout(atualizar, 10000);
+  })();
+</script>
+{% endif %}
+{% endblock %}
+

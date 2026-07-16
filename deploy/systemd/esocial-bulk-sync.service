@@ -1,0 +1,31 @@
+[Unit]
+Description=ESocial - sync diario de inconsistencias (todas as empresas ativas, ultimos 60 dias)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Ajuste USER/GROUP para o usuario dono do deploy (ex.: um usuario dedicado 'esocial').
+User=esocial
+Group=esocial
+
+# IMPORTANTE: WorkingDirectory deve ser a RAIZ do projeto na VPS.
+# O app le o .env e o banco (sqlite:///./data/app.db) de forma RELATIVA a este diretorio.
+WorkingDirectory=/opt/safework/ESocial
+
+# Caminho do python do venv + o script standalone (roda em processo proprio).
+ExecStart=/opt/safework/ESocial/.venv/bin/python scripts/run_bulk_sync.py
+
+# Rede de seguranca: aborta se algo travar por muito tempo (o lote leva ~1,4-5h).
+TimeoutStartSec=8h
+
+# Roda com prioridade mais baixa para nao competir com o servidor web.
+Nice=10
+
+# (Opcional) Carregar variaveis do .env tambem no ambiente do processo.
+# O app ja le o .env sozinho via pydantic-settings, entao normalmente NAO e necessario.
+# EnvironmentFile=/opt/safework/ESocial/.env
+
+# Type=oneshot + timer garante que NAO ha sobreposicao: enquanto esta execucao
+# estiver ativa, o timer nao inicia uma segunda. (O app tambem tem trava propria.)

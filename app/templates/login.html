@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<section class="login-panel">
+  <h1>Entrar</h1>
+  {% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="/login" class="form-stack">
+    <label>
+      Usuario
+      <input name="username" autocomplete="username" required>
+    </label>
+    <label>
+      Senha
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="button">Entrar</button>
+  </form>
+</section>
+{% endblock %}
+
