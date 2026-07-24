@@ -4,6 +4,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -68,9 +69,9 @@ def report_page(
         if funcionario:
             base = base.filter(Inconsistency.nome_funcionario.ilike(f"%{funcionario}%"))
         if di:
-            base = base.filter(Inconsistency.data >= di)
+            base = base.filter(func.date(Inconsistency.created_at) >= di.isoformat())
         if df:
-            base = base.filter(Inconsistency.data <= df)
+            base = base.filter(func.date(Inconsistency.created_at) <= df.isoformat())
         # cada dropdown restringe, exceto quando estamos calculando as opcoes dele.
         if setor and exclude != "setor":
             base = base.filter(Inconsistency.nome_setor == setor)

@@ -65,9 +65,9 @@ def dashboard(
         if inconsistencia_sel:
             query = query.filter(Inconsistency.descricao_inconsistencia == inconsistencia_sel)
         if di:
-            query = query.filter(Inconsistency.data >= di)
+            query = query.filter(func.date(Inconsistency.created_at) >= di.isoformat())
         if df:
-            query = query.filter(Inconsistency.data <= df)
+            query = query.filter(func.date(Inconsistency.created_at) <= df.isoformat())
         return query
 
     total = aplicar(db.query(func.count(Inconsistency.id))).scalar() or 0

@@ -164,7 +164,7 @@
         <td>{{ item.nome_setor or "-" }}</td>
         <td>{{ item.nome_cargo or "-" }}</td>
         <td>{{ item.nome_funcionario or "-" }}</td>
-        <td>{{ item.data.strftime("%d/%m/%Y") if item.data else "-" }}</td>
+        <td>{{ item.created_at.strftime("%d/%m/%Y") if item.created_at else "-" }}</td>
         <td><span class="badge">{{ item.leiaute or item.origem_exporta }}</span></td>
         <td class="highlight">{{ item.descricao_inconsistencia }}</td>
       </tr>
@@ -223,4 +223,3 @@
 </script>
 {% endif %}
 {% endblock %}
-
