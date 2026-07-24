@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
@@ -18,6 +18,8 @@ from app.services.sync import sync_companies, sync_inconsistencies
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+PAGE_SIZE = 50  # registros por pagina na tabela do Analitico
 
 
 def _clean(value: str | None) -> str | None:
@@ -47,6 +49,7 @@ def report_page(
     inconsistencia: str | None = Query(default=None),
     data_inicio: str | None = Query(default=None),
     data_fim: str | None = Query(default=None),
+    page: int = Query(default=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -94,11 +97,33 @@ def report_page(
         )
         return [row[0] for row in rows]
 
+    total = apply_filters(db.query(func.count(Inconsistency.id))).scalar() or 0
+    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = max(1, min(page, total_pages))
     inconsistencies = (
         apply_filters(db.query(Inconsistency))
-        .order_by(Inconsistency.updated_at.desc())
-        .limit(500)
+        .order_by(Inconsistency.created_at.asc())
+        .offset((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
         .all()
+    )
+
+    # querystring com os filtros atuais (sem 'page') para preservar na paginacao
+    filtros_qs = urlencode(
+        {
+            k: v
+            for k, v in {
+                "empresa_codigo": empresa_codigo or "",
+                "funcionario": funcionario or "",
+                "setor": setor or "",
+                "cargo": cargo or "",
+                "leiaute": leiaute or "",
+                "inconsistencia": inconsistencia or "",
+                "data_inicio": data_inicio or "",
+                "data_fim": data_fim or "",
+            }.items()
+            if v
+        }
     )
 
     return templates.TemplateResponse(
@@ -116,6 +141,12 @@ def report_page(
             "message": request.query_params.get("message"),
             "error": request.query_params.get("error"),
             "bulk_job": ultimo_job(db),
+            # paginacao
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "page_size": PAGE_SIZE,
+            "filtros_qs": filtros_qs,
             # valores selecionados nos filtros (para repopular o formulario)
             "f_empresa_codigo": empresa_codigo or "",
             "f_funcionario": funcionario or "",

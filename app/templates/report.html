@@ -177,6 +177,22 @@
   </table>
 </section>
 
+{% if total %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a class="button button-secondary" href="?page={{ page - 1 }}{% if filtros_qs %}&{{ filtros_qs }}{% endif %}">&lsaquo; Anterior</a>
+  {% else %}
+  <span class="button button-secondary disabled">&lsaquo; Anterior</span>
+  {% endif %}
+  <span class="page-info">Pagina {{ page }} de {{ total_pages }} &middot; {{ total }} registros</span>
+  {% if page < total_pages %}
+  <a class="button button-secondary" href="?page={{ page + 1 }}{% if filtros_qs %}&{{ filtros_qs }}{% endif %}">Proxima &rsaquo;</a>
+  {% else %}
+  <span class="button button-secondary disabled">Proxima &rsaquo;</span>
+  {% endif %}
+</div>
+{% endif %}
+
 <script>
   // Mostra o banner desta acao uma vez e limpa message/error da URL,
   // preservando os filtros (setor, empresa, etc.).

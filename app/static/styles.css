@@ -551,6 +551,24 @@ select {
   opacity: 0.55;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.page-info {
+  color: var(--muted);
+}
+
+.button.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .bulk-actions {
   display: flex;
   gap: 8px;
