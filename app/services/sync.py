@@ -107,17 +107,61 @@ def sync_inconsistencies(
             settings.soc_inconsistencias_gerais_codigo,
             settings.soc_inconsistencias_2240_codigo,
         ]
-        db.query(Inconsistency).filter(
-            Inconsistency.company_codigo_soc == company_codigo,
-            Inconsistency.origem_exporta.in_(origens),
-        ).delete(synchronize_session=False)
 
-        count = 0
+        # Normaliza os registros vindos do SOC (objetos transitorios em memoria).
+        novos: list[Inconsistency] = []
         for origem_exporta, leiaute_label, row in rows:
             item = normalize_inconsistency(row, company, origem_exporta, leiaute_label)
             if item:
-                db.add(item)
-                count += 1
+                novos.append(item)
+
+        def identidade(inc: Inconsistency):
+            return (
+                inc.company_codigo_soc,
+                inc.codigo_funcionario,
+                inc.data,
+                inc.leiaute,
+                inc.descricao_inconsistencia,
+            )
+
+        novos_por_id = {identidade(i): i for i in novos}
+        existentes = (
+            db.query(Inconsistency)
+            .filter(
+                Inconsistency.company_codigo_soc == company_codigo,
+                Inconsistency.origem_exporta.in_(origens),
+            )
+            .all()
+        )
+        existentes_por_id = {identidade(e): e for e in existentes}
+        agora = datetime.utcnow()
+
+        # Remove as que nao voltaram do SOC (resolvidas).
+        for chave, existente in existentes_por_id.items():
+            if chave not in novos_por_id:
+                db.delete(existente)
+
+        # Mescla: mantem as ja existentes (preserva created_at = 1a puxada);
+        # insere as novas (created_at = agora).
+        for chave, novo in novos_por_id.items():
+            existente = existentes_por_id.get(chave)
+            if existente is None:
+                db.add(novo)  # created_at default = agora (primeira vez vista)
+            else:
+                # atualiza campos descritivos, mas NAO mexe no created_at.
+                existente.nome_empresa = novo.nome_empresa
+                existente.codigo_unidade = novo.codigo_unidade
+                existente.nome_unidade = novo.nome_unidade
+                existente.codigo_setor = novo.codigo_setor
+                existente.nome_setor = novo.nome_setor
+                existente.codigo_cargo = novo.codigo_cargo
+                existente.nome_cargo = novo.nome_cargo
+                existente.nome_funcionario = novo.nome_funcionario
+                existente.situacao_funcionario = novo.situacao_funcionario
+                existente.raw_payload = novo.raw_payload
+                existente.updated_at = agora
+
+        count = len(novos_por_id)
 
         log.status = "success"
         log.mensagem = f"{count} inconsistencias sincronizadas."
